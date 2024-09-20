@@ -82,11 +82,11 @@ public class PlayerController : MonoBehaviour
     {
         if (moveInput < 0f)
         {
-            playerSprite.flipX = false;
+            playerSprite.flipX = true;
         }
         else if (moveInput > 0f)
         {
-            playerSprite.flipX = true;
+            playerSprite.flipX = false;
         }
     }
 
@@ -151,6 +151,10 @@ public class PlayerController : MonoBehaviour
                 FlipX();
                 playerAnimator.Play("Idle");
             }
+        }
+        else if (!isGrounded)
+        {
+            animation = State.Fall;
         }
     }
 
