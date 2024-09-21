@@ -22,17 +22,18 @@ public class PlayerController : MonoBehaviour
     private bool danceInput = false;
     private bool dashInput = false;
     private bool kickInput = false;
+    private bool runInput = false;
+    private bool upInput = false;
+    private bool downInput = false;
     private float moveInput = 0f;
     private bool isGrounded = false;
     private bool isMounted = false;
     private bool damageTest = false;
-    private bool upInput = false;
-    private bool downInput = false;
     private bool hasDashed = false;
 
     enum State { Idle, Arrow, Dance, Dash, Attack, Fall, Fireball, Jump, Kick, Lay, Move }
 
-    State animation = State.Idle;
+    State currentState = State.Idle;
 
     // Start is called before the first frame update
     void Start()
@@ -51,15 +52,16 @@ public class PlayerController : MonoBehaviour
         arrowInput = Input.GetKey(KeyCode.L);
         danceInput = Input.GetKey(KeyCode.B);
         kickInput = Input.GetKey(KeyCode.H);
-        dashInput = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
         upInput = Input.GetKey(KeyCode.W);
         downInput = Input.GetKey(KeyCode.S);
+        runInput = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        dashInput = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
         moveInput = Input.GetAxisRaw("Horizontal");
         damageTest = Input.GetKey(KeyCode.Backspace);
 
         //{ Idle, Arrow, Dance, Dash, Attack, Fall, Fireball, Jump, Kick, Lay, Move }
 
-        switch (animation)
+        switch (currentState)
         {
             case State.Idle: IdleCommands(); break;
             case State.Arrow: ArrowCommands(); break;
@@ -74,19 +76,19 @@ public class PlayerController : MonoBehaviour
             case State.Move: MoveCommands(); break;
         }
 
-        if (damageTest) animation = State.Lay;
+        if (damageTest) currentState = State.Lay;
 
     }
 
     private void FlipX()
     {
-        if (moveInput < 0f)
+        if (moveInput < 0f && transform.localScale.x > 0)
         {
-            playerSprite.flipX = true;
+            transform.localScale = new Vector3(-transform.localScale.x, transform.localScale.y, transform.localScale.z);
         }
-        else if (moveInput > 0f)
+        else if (moveInput > 0f && transform.localScale.x < 0)
         {
-            playerSprite.flipX = false;
+            transform.localScale = new Vector3(-transform.localScale.x, transform.localScale.y, transform.localScale.z);
         }
     }
 
@@ -103,43 +105,73 @@ public class PlayerController : MonoBehaviour
         return stateInfo.IsName(animationName) && stateInfo.normalizedTime >= 1.0f;
     }
 
-    private bool IsInAttackState()
+    private void CloseState(string animationName)
+    {
+        if(IsAnimationFinished(animationName))
+        {
+            playerRb.gravityScale = 1;
+
+            if (isGrounded)
+            {
+                currentState = State.Idle;
+            }
+            else currentState = State.Fall;
+        }
+    }
+
+    private bool IsAttacking()
     {
         return playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("NormalAttack") ||
         playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("UpAttack") ||
         playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("DownAttack") ||
         playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("HorseAttack") ||
-        playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("JumpAttack");
+        playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("JumpAttack") ||
+        playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("Kick");
     }
 
     private void IdleCommands()
     {
         if (arrowInput)
         {
-            animation = State.Arrow;
+            currentState = State.Arrow;
         }
         else if (fireballInput)
         {
-            animation = State.Fireball;
+            currentState = State.Fireball;
         }
-        else if (attackInput)
+        else if (danceInput)
         {
-            animation = State.Attack;
+            currentState = State.Dance;
         }
-        else if (moveInput != 0f)
+        else if (dashInput && !hasDashed)
         {
-            animation = State.Move;
+            Vector2 dashDirection = transform.localScale.x > 0 ? Vector2.right : Vector2.left;
+            playerRb.AddForce(dashDirection * jumpForce, ForceMode2D.Impulse);
+            currentState = State.Dash;
+        }
+        else if (attackInput || upInput || downInput)
+        {
+            if (IsAttacking())
+            {
+                return;
+            }
+            currentState = State.Attack;
+        }
+        else if (moveInput != 0f || runInput)
+        {
+            currentState = State.Move;
         }
         else if (kickInput)
         {
-            animation = State.Kick;
+            currentState = State.Kick;
         }
         else if (isGrounded)
         {
             if(jumpInput)
             {
                 playerRb.AddForce(new Vector2(0, jumpForce), ForceMode2D.Impulse);
-                animation = State.Jump;
+                isGrounded = false;
+                currentState = State.Jump;
             }
             else if (isMounted)
             {
@@ -154,7 +186,7 @@ public class PlayerController : MonoBehaviour
         }
         else if (!isGrounded)
         {
-            animation = State.Fall;
+            currentState = State.Fall;
         }
     }
 
@@ -162,131 +194,107 @@ public class PlayerController : MonoBehaviour
     {
         playerAnimator.Play("Arrow");
 
-        if(IsAnimationFinished("Arrow"))
-        {
-            if (isGrounded)
-            {
-                animation = State.Idle;
-            }
-            else
-            {
-                animation = State.Fall;
-            }
-        }
+        CloseState("Arrow");
     }
 
     private void DanceCommands()
     {
         playerAnimator.Play("Dance");
 
-        if(IsAnimationFinished("Dance"))
-        {
-            if (isGrounded)
-            {
-                animation = State.Idle;
-            }
-            else
-            {
-                animation = State.Fall;
-            }
-        }
+        CloseState("Dance");
     }
 
     private void DashCommands()
     {
-        if(!hasDashed)
+        if(!hasDashed && !isGrounded)
         {
-            hasDashed = true;
-            playerRb.velocity = new Vector2(moveInput * runSpeed, playerRb.velocity.y);
+            playerRb.gravityScale = 0;
             playerAnimator.Play("Dash");
-
-            StartCoroutine(Delay());
+            CloseState("Dash");
+        }
+        else if (!hasDashed)
+        {
+            playerAnimator.Play("Roll");
+            CloseState("Roll");
         }
     }
 
     private void AttackCommands()
     {
-        if (IsInAttackState())
-        {
-            return; 
-        }
-        
         FlipX();
 
-        if (isGrounded && upInput)
+        if (damageTest)
+        {
+            currentState = State.Lay;
+        }
+        else if (isGrounded && upInput)
         {
             playerAnimator.Play("UpAttack");
+
+            CloseState("UpAttack");
         }
         else if (isGrounded && downInput)
         {
             playerAnimator.Play("DownAttack");
+
+            CloseState("DownAttack");
         }
         else if (isGrounded)
         {
             playerAnimator.Play("NormalAttack");
+
+            CloseState("NormalAttack");
         }
         else if (isMounted)
         {
             playerAnimator.Play("HorseAttack");
+
+            CloseState("HorseAttack");
         }
         else if (!isGrounded)
         {
+            playerRb.gravityScale = 0;
             playerAnimator.Play("JumpAttack");
 
-            if (IsAnimationFinished("JumpAttack"))
-            {
-                animation = State.Fall;
-            }
-        }
-
-        if (damageTest)
-        {
-            animation = State.Lay;
-        }
-        else if (IsAnimationFinished("UpAttack") || IsAnimationFinished("DownAttack") || 
-        IsAnimationFinished("NormalAttack") || IsAnimationFinished("HorseAttack"))
-        {
-            animation = State.Idle;
+            CloseState("JumpAttack");
         }
     }
 
     private void FallCommands()
     {
-        playerAnimator.Play("Fall");
-
-        MoveX(walkSpeed);
-
-        if(attackInput)
+        if (playerRb.velocity.y < 0 && !isGrounded)
         {
-            animation = State.Attack;
+            playerAnimator.Play("Fall");
+
+            MoveX(walkSpeed);
+
+            if(attackInput)
+            {
+                currentState = State.Attack;
+            }
+            else if (dashInput && !hasDashed)
+            {
+                Vector2 dashDirection = transform.localScale.x > 0 ? Vector2.right : Vector2.left;
+                playerRb.AddForce(dashDirection * jumpForce, ForceMode2D.Impulse);
+                currentState = State.Dash;
+            }
         }
-        else if(isGrounded)
+        else
         {
-            playerAnimator.Play("Land");  
+            playerAnimator.Play("Land");
 
             if(IsAnimationFinished("Land"))
             {
-                animation = State.Idle;
+                currentState = State.Idle;
             }
         }
-
     }
 
     private void FireballCommands()
     {
         playerAnimator.Play("Fireball");
 
-        if(IsAnimationFinished("Fireball"))
-        {
-            if (isGrounded)
-            {
-                animation = State.Idle;
-            }
-            else
-            {
-                animation = State.Fall;
-            }
-        }
+        CloseState("Fireball");
     }
 
     private void JumpCommands()
@@ -297,11 +305,17 @@ public class PlayerController : MonoBehaviour
 
         if (attackInput)
         {
-            animation = State.Attack;
+            currentState = State.Attack;
+        }
+        else if (dashInput && !hasDashed)
+        {
+            Vector2 dashDirection = transform.localScale.x > 0 ? Vector2.right : Vector2.left;
+            playerRb.AddForce(dashDirection * jumpForce, ForceMode2D.Impulse);
+            currentState = State.Dash;
         }
         else if (playerRb.velocity.y < 0)
         {
-            animation = State.Fall;
+            currentState = State.Fall;
         }
     }
 
@@ -309,17 +323,7 @@ public class PlayerController : MonoBehaviour
     {
         playerAnimator.Play("Kick");
 
-        if(IsAnimationFinished("Kick"))
-        {
-            if (isGrounded)
-            {
-                animation = State.Idle;
-            }
-            else
-            {
-                animation = State.Fall;
-            }
-        }
+        CloseState("Kick");
     }
 
     private void LayCommands()
@@ -329,28 +333,34 @@ public class PlayerController : MonoBehaviour
         if (IsAnimationFinished("Lay"))
         {
             damageTest = false;
-            animation = State.Idle;
+            currentState = State.Idle;
         }
     }
 
     private void MoveCommands()
     {
-        if(isGrounded && dashInput)
+        if(isGrounded && jumpInput)
+        {
+            playerRb.AddForce(new Vector2(0, jumpForce), ForceMode2D.Impulse);
+            isGrounded = false;
+            currentState = State.Jump;
+        }
+        else if (attackInput)
+        {
+            currentState = State.Attack;
+        }
+        else if (moveInput == 0f)
+        {
+            if (isGrounded)
+            {
+                currentState = State.Idle;
+            }
+            else currentState = State.Fall;
+        }
+        else if(isGrounded && runInput)
         {
             playerAnimator.Play("Run");
             MoveX(runSpeed);
-        }
-        else if (!isGrounded && dashInput)
-        {
-            animation = State.Dash;
-        }
-        else if (moveInput == 0f && isMounted)
-        {
-            animation = State.Idle;
-        }
-        else if (moveInput == 0f && isGrounded)
-        {
-            animation = State.Idle;
         }
         else if (isGrounded)
         {
@@ -363,12 +373,6 @@ public class PlayerController : MonoBehaviour
     {
         yield return new WaitForSeconds(delayTime);
         hasDashed = false;
-
-        if (isMounted)
-        {
-            animation = State.Idle;
-        }
-        else animation = State.Fall;
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -380,6 +384,7 @@ public class PlayerController : MonoBehaviour
         if (collision.gameObject.CompareTag("Ground"))
         {
             isGrounded = true;
+            playerAnimator.SetBool("Grounded", isGrounded);
         }
 
     }
@@ -389,10 +394,6 @@ public class PlayerController : MonoBehaviour
         if (collision.gameObject.CompareTag("Mount"))
         {
             isMounted = false;
-        }
-        if (collision.gameObject.CompareTag("Ground"))
-        {
-            isGrounded = false;
         }
     }
 }

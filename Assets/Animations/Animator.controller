@@ -130,6 +130,32 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!1102 &-4890800175884936624
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Roll
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours: []
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 1
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: 7400000, guid: 0090f1eb47583cf4daae3d6c5cb1081f, type: 2}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
 --- !u!1107 &-2029573398935072928
 AnimatorStateMachine:
   serializedVersion: 6
@@ -150,13 +176,13 @@ AnimatorStateMachine:
     m_Position: {x: 110, y: -200, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 6659808320885018968}
-    m_Position: {x: 310, y: 150, z: 0}
+    m_Position: {x: 360, y: 180, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -8737290090181455640}
     m_Position: {x: 430, y: -270, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 7019260800603327262}
-    m_Position: {x: 590, y: -40, z: 0}
+    m_Position: {x: 690, y: -60, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 2975204260141597717}
     m_Position: {x: 90, y: 60, z: 0}
@@ -177,7 +203,7 @@ AnimatorStateMachine:
     m_Position: {x: -210, y: -130, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 3812014725595722246}
-    m_Position: {x: 830, y: 0, z: 0}
+    m_Position: {x: 820, y: 40, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -6788410430103256749}
     m_Position: {x: 570, y: -410, z: 0}
@@ -193,6 +219,9 @@ AnimatorStateMachine:
   - serializedVersion: 1
     m_State: {fileID: 2084101341779643269}
     m_Position: {x: -120, y: -180, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: -4890800175884936624}
+    m_Position: {x: 48.56787, y: 320.24918, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []
@@ -237,7 +266,13 @@ AnimatorController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Animator
   serializedVersion: 5
-  m_AnimatorParameters: []
+  m_AnimatorParameters:
+  - m_Name: Grounded
+    m_Type: 4
+    m_DefaultFloat: 0
+    m_DefaultInt: 0
+    m_DefaultBool: 0
+    m_Controller: {fileID: 0}
   m_AnimatorLayers:
   - serializedVersion: 5
     m_Name: Base Layer
